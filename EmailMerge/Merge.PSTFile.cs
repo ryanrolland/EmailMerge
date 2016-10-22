@@ -191,23 +191,6 @@ namespace EmailMerge
             }
         }
 
-        public static void MergePSTFiles(string pstFilename1, string pstFilename2, string mergedFilename = null,
-                                        string duplicatesFilename1 = null, string duplicatesFilename2 = null, bool saveDuplicates = true,
-                                        string[] foldersToIgnore = null)
-        {
-
-            Console.WriteLine(String.Format("Loading and Merging PST Files - file1: '{0}' into file2: '{1}'", pstFilename1, pstFilename2));
-
-            //Get PST 1
-            PSTFile pstFile1 = new PSTFile(pstFilename1, "PST1");
-
-
-            //Get PST 2
-            PSTFile pstFile2 = new PSTFile(pstFilename2, "PST2");
-
-            //Merge PST files
-            MergePSTFiles(pstFile1, pstFile2, mergedFilename, duplicatesFilename1, duplicatesFilename2, saveDuplicates, foldersToIgnore);
-        }
 
         /// <summary>
         /// 
@@ -219,51 +202,42 @@ namespace EmailMerge
         /// <param name="duplicatesFilename2"></param>
         /// <param name="saveDuplicates"></param>
         /// <param name="foldersToIgnore"></param>
-        public static void MergePSTFiles(PSTFile pstFile1, PSTFile pstFile2, string mergedFilename = null,
+        public static void MergePSTFiles(string directoryToMerge, string mergedFilename = null,
                                             string duplicatesFilename1 = null, string duplicatesFilename2 = null, bool saveDuplicates = true,
                                             string[] foldersToIgnore = null)
         {
             
-            Console.WriteLine(String.Format("Merging PSTFile Objects - file1: '{0}' into file2: '{1}'", pstFile1.PSTFilePath+":"+pstFile1.PSTName, pstFile2.PSTFilePath + ":" + pstFile2.PSTName));
             
-
             PSTFile mergedPSTFile = new PSTFile(mergedFilename, "Merged");
 
-            Console.WriteLine("Merging PST:" + pstFile1.PSTFilePath);
-            pstFile1.GetMailItems(true, foldersToIgnore);
+            var ext = new List<string> { "pst" };
+            string[] filePaths = Directory.GetFiles(directoryToMerge, "*.*", SearchOption.AllDirectories).Where(s => ext.Contains(Path.GetExtension(s))).ToArray();
 
-            List<MailItemObject> mailItems = pstFile1.GetAllMailItems();
-            Console.WriteLine("Mail items ("+ mailItems.Count+") loaded from:"+pstFile1.PSTFilePath);
+            foreach (string s in filePaths)
+            {
+                string fileName = Path.GetFileName(s);
+                PSTFile sourceFile = new PSTFile(s, fileName);
+                sourceFile.GetMailItems(true, foldersToIgnore);
+                List<MailItemObject> mailItems = sourceFile.GetAllMailItems();
+                Console.WriteLine("Mail items (" + mailItems.Count + ") loaded from:" + sourceFile.PSTFilePath);
 
-            Console.WriteLine("Before Add to Merged Call After Load");
-            Console.ReadLine();
-
-            mergedPSTFile.AddMailItems(mailItems);
-
-            Console.WriteLine("Waiting after first PST");
-            Console.ReadLine();
-
-            Console.WriteLine("Merging PST:" + pstFile2.PSTFilePath);
-            pstFile2.GetMailItems(true, foldersToIgnore);
+                mergedPSTFile.AddMailItems(mailItems);
+            }
 
 
-            List<MailItemObject> mailItems2 = pstFile2.GetAllMailItems();
-            Console.WriteLine("Mail items (" + mailItems2.Count + ") loaded from:" + pstFile2.PSTFilePath);
+            //Console.WriteLine("Merging PST:" + pstFile2.PSTFilePath);
+            //pstFile2.GetMailItems(true, foldersToIgnore);
 
-            Console.WriteLine("Before Add to Merged Call After Load");
-            Console.ReadLine();
 
-            mergedPSTFile.AddMailItems(mailItems2);
+            //List<MailItemObject> mailItems2 = pstFile2.GetAllMailItems();
+            //Console.WriteLine("Mail items (" + mailItems2.Count + ") loaded from:" + pstFile2.PSTFilePath);
+
+
+            //mergedPSTFile.AddMailItems(mailItems2);
 
         }
 
-        public void MergePSTFiles(PSTFile pstFile2, string mergedFilename = null,
-                                    string duplicatesFilename1 = null, string duplicatesFilename2 = null, bool saveDuplicates = true,
-                                    string[] foldersToIgnore = null)
-        {
-            //Merge PST files
-            MergePSTFiles(this, pstFile2, mergedFilename, duplicatesFilename1, duplicatesFilename2, saveDuplicates, foldersToIgnore);
-        }
+
         #endregion
 
 
