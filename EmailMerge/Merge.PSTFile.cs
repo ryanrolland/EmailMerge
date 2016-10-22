@@ -224,17 +224,6 @@ namespace EmailMerge
                 mergedPSTFile.AddMailItems(mailItems);
             }
 
-
-            //Console.WriteLine("Merging PST:" + pstFile2.PSTFilePath);
-            //pstFile2.GetMailItems(true, foldersToIgnore);
-
-
-            //List<MailItemObject> mailItems2 = pstFile2.GetAllMailItems();
-            //Console.WriteLine("Mail items (" + mailItems2.Count + ") loaded from:" + pstFile2.PSTFilePath);
-
-
-            //mergedPSTFile.AddMailItems(mailItems2);
-
         }
 
 
