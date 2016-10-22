@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EmailMerge;
-
+using System.IO;
 namespace wtf
 {
     class Program
@@ -24,60 +24,33 @@ namespace wtf
         {
             try
             {
-                if (!args.Any() || args.Count() < 2) throw new ArgumentException("You must provide at least 2 pst filenames to merge");
 
                 Console.WriteLine("Loading and Merging PST Files");
 
-                string pst1 = args[0];
-                string pst2 = args[1];
 
-                string pstMerged = null;
-                string duplicates1 = null;
-                string duplicates2 = null;
-                bool saveDuplicates = true;
-                string[] foldersToIgnore = null;
+                PSTFile pstFile1 = new PSTFile(@"C:\dev\EmailMerge\working\010116.pst", "010116.pst");
+                PSTFile pstFile2 = new PSTFile(@"C:\dev\EmailMerge\working\110915.pst", "110915.pst");
 
-                for (int i = 2; i < args.Count(); i++)
-                {
-                    switch (i)
-                    {
-                        case 2:
-                            pstMerged = args[i];
-                            break;
-                        case 3:
-                            duplicates1 = args[i];
-                            break;
-                        case 4:
-                            duplicates2 = args[i];
-                            break;
-                        case 5:
-                            if (!bool.TryParse(args[i], out saveDuplicates))
-                                throw new ArgumentException(String.Format("Error converting string to boolean: '{0}'", args[i]));
-                            break;
-                        case 6:
-                            foldersToIgnore = args[i].Split(',');
-                            break;
-                    }
-                }
+                PSTFile.MergePSTFiles(pstFile1,pstFile2, @"C:\dev\EmailMerge\working\merge1.pst", null,null,false,null);
 
-                //Merge PST Files
-                PSTFile.MergePSTFiles(pstFilename1: pst1,
-                                        pstFilename2: pst2,
-                                        mergedFilename: pstMerged,
-                                        duplicatesFilename1: duplicates1,
-                                        duplicatesFilename2: duplicates2,
-                                        saveDuplicates: saveDuplicates,
-                                        foldersToIgnore: foldersToIgnore);
+                //PSTFile mergedPSTFile = new PSTFile(@"C:\dev\EmailMerge\working\merge1.pst", "Merged");
+
+
+
+
+
+                //}
+
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.ToString());
             }
             
             Console.WriteLine("Merge Finished... press any key to exit");
             Console.ReadKey(true);
         }
 
-        
+       
     }
 }

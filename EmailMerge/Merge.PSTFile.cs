@@ -209,49 +209,52 @@ namespace EmailMerge
             MergePSTFiles(pstFile1, pstFile2, mergedFilename, duplicatesFilename1, duplicatesFilename2, saveDuplicates, foldersToIgnore);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pstFile1"></param>
+        /// <param name="pstFile2"></param>
+        /// <param name="mergedFilename"></param>
+        /// <param name="duplicatesFilename1"></param>
+        /// <param name="duplicatesFilename2"></param>
+        /// <param name="saveDuplicates"></param>
+        /// <param name="foldersToIgnore"></param>
         public static void MergePSTFiles(PSTFile pstFile1, PSTFile pstFile2, string mergedFilename = null,
                                             string duplicatesFilename1 = null, string duplicatesFilename2 = null, bool saveDuplicates = true,
                                             string[] foldersToIgnore = null)
         {
             
-            Console.WriteLine(String.Format("Merging PSTFile Objects - file1: '{0}' into file2: '{1}'", pstFile1.PSTName, pstFile2.PSTName));
+            Console.WriteLine(String.Format("Merging PSTFile Objects - file1: '{0}' into file2: '{1}'", pstFile1.PSTFilePath+":"+pstFile1.PSTName, pstFile2.PSTFilePath + ":" + pstFile2.PSTName));
             
-            //Get PST 1
+
+            PSTFile mergedPSTFile = new PSTFile(mergedFilename, "Merged");
+
+            Console.WriteLine("Merging PST:" + pstFile1.PSTFilePath);
             pstFile1.GetMailItems(true, foldersToIgnore);
-            //Extract duplicates
-            if (saveDuplicates && pstFile1.DuplicateMailItems.Any())
-            {
-                duplicatesFilename1 = duplicatesFilename1 ?? pstFile1.GetPSTFileDirectory() + "duplicates_" + pstFile1.GetPSTFilename();
-                pstFile1.SaveDuplicatesToFile(duplicatesFilename1, "DuplicatesIn1");
-            }
 
-            //Get PST 2
+            List<MailItemObject> mailItems = pstFile1.GetAllMailItems();
+            Console.WriteLine("Mail items ("+ mailItems.Count+") loaded from:"+pstFile1.PSTFilePath);
+
+            Console.WriteLine("Before Add to Merged Call After Load");
+            Console.ReadLine();
+
+            mergedPSTFile.AddMailItems(mailItems);
+
+            Console.WriteLine("Waiting after first PST");
+            Console.ReadLine();
+
+            Console.WriteLine("Merging PST:" + pstFile2.PSTFilePath);
             pstFile2.GetMailItems(true, foldersToIgnore);
-            //Extract Duplicates
-            if (saveDuplicates && pstFile2.DuplicateMailItems.Any())
-            {
-                duplicatesFilename2 = duplicatesFilename2 ?? pstFile1.GetPSTFileDirectory() + "duplicates_" + pstFile1.GetPSTFilename();
-                pstFile2.SaveDuplicatesToFile(duplicatesFilename2, "DuplicatesIn2");
-            }
 
-            // In 2 Not in 1
-            List<PSTFile.MailItemObject> mailIn2NotIn1 = ComparePSTFiles(pstFile1, pstFile2, PSTFile.MailCompareType.In2NotIn1);
 
-            //Merge into new PST file
-            if (mergedFilename != null && mergedFilename != pstFile1.PSTFilePath)
-            {
-                PSTFile mergedPSTFile = new PSTFile(mergedFilename, "Merged");
-                mergedPSTFile.AddMailItems(pstFile1.GetAllMailItems());
-                if (mailIn2NotIn1.Any())
-                    mergedPSTFile.AddMailItems(mailIn2NotIn1);
-            }
-            //Merge 2 into 1...
-            else if (mergedFilename == null || mergedFilename == pstFile1.PSTFilePath)
-            {
-                if (mailIn2NotIn1.Any())
-                    pstFile1.AddMailItems(mailIn2NotIn1);
-            }
-            
+            List<MailItemObject> mailItems2 = pstFile2.GetAllMailItems();
+            Console.WriteLine("Mail items (" + mailItems2.Count + ") loaded from:" + pstFile2.PSTFilePath);
+
+            Console.WriteLine("Before Add to Merged Call After Load");
+            Console.ReadLine();
+
+            mergedPSTFile.AddMailItems(mailItems2);
+
         }
 
         public void MergePSTFiles(PSTFile pstFile2, string mergedFilename = null,
@@ -269,10 +272,14 @@ namespace EmailMerge
         //https://social.msdn.microsoft.com/Forums/vstudio/en-US/3dd2bd06-5738-4fb2-b628-0d7ab2be8157/how-to-directly-copy-a-mailitem-into-public-folder-sth-like-mailitemcopydestinationfolder?forum=vsto
         public void AddMailItems(List<MailItemObject> mailItems)
         {
+            int count = 0;
+
             Parallel.ForEach(mailItems, mailItemObject =>
             {
                 AddMailItems(mailItemObject.MailObject, mailItemObject.FolderName);
+                count++;
             });
+            Console.WriteLine("Added " + count + " mail items.");
         }
         public void AddMailItems(List<MailItem> mailItems, string folderName = "")
         {
@@ -288,6 +295,9 @@ namespace EmailMerge
             MAPIFolder destFolder = GetFolder(folderName);
 
             MailItem tempMailItem = mailItem.Copy();
+
+            Console.WriteLine("Copying:" + tempMailItem.SentOn.ToString("dd-MM-yyyy_HH:mm:ss") + " :::: " + tempMailItem.Subject);
+
             tempMailItem.Move(destFolder);
         }
 
@@ -351,8 +361,42 @@ namespace EmailMerge
             DuplicateMailItems.Clear();
             OriginalMailItems.Clear();
 
-            MAPIFolder rootFolder = _outlookNameSpace.Stores[PSTName].GetRootFolder();
-            GetMailItems(rootFolder.Folders, includeSubFolders, foldersToIgnore);
+
+            Microsoft.Office.Interop.Outlook.Stores stores = _outlookNameSpace.Stores;
+            foreach (Microsoft.Office.Interop.Outlook.Store store in stores)
+            {
+                try { 
+                if (store.IsDataFileStore == true)
+                {
+
+
+                    if(store.FilePath.Contains(this.PSTName))
+                    {
+
+                            Console.WriteLine(String.Format("Loading Store: "
+                            + store.DisplayName
+                            + "\n" + "File Path: "
+                            + store.FilePath + "\n"));
+
+                            MAPIFolder rootFolder = store.GetRootFolder();
+                            GetMailItems(rootFolder.Folders, includeSubFolders, foldersToIgnore);
+                            break;
+                    }
+                    
+
+                        Console.WriteLine(String.Format("Skipping Store: "
+                        + store.DisplayName
+                        + "\n" + "File Path: "
+                        + store.FilePath + "\n"));
+
+                    }
+                } catch(System.Exception e)
+                {
+                    throw new System.Exception("Problem loading Store", e);
+                }
+            }
+
+
         }
 
         private void GetMailItems(Folders folders, bool includeSubFolders = true, string[] foldersToIgnore = null)
@@ -381,7 +425,7 @@ namespace EmailMerge
                 }
 
                 string folderPath = folder.FolderPath.Replace(@"\\" + PSTName, "");
-                Console.WriteLine("Loading Mail Items for folder: '" + folder.Name + "' in path: '" + folderPath + "'");
+                Console.WriteLine("Loading Mail Items for folder: '" + folder.Name + "' in path: '" + folderPath + "'"+" from "+PSTFilePath);
                 int i = 0;
 
                 // Traverse through all folders in the PST file
@@ -428,11 +472,11 @@ namespace EmailMerge
             {
 
                 string key = mailItem.SenderEmailAddress + "|"
-                            + String.Concat(GetSMTPAddressForRecipients(mailItem)) + "|"
+                            //+ String.Concat(GetSMTPAddressForRecipients(mailItem)) + "|"
                             + mailItem.SentOn.ToString("dd-MM-yyyy_HH:mm:ss") + "|"
                             + mailItem.Subject + "|"
-                            + GetMailBodyHashCode(mailItem) + "|"
-                            + GetAttachmentsHashCode(mailItem);
+                            + GetMailBodyHashCode(mailItem);// + "|"
+                            //+ GetAttachmentsHashCode(mailItem);
 
                 return key;
             }
